@@ -236,7 +236,9 @@ export default function QuotationsPage() {
                 <tbody>
                   {quotations.map((q) => (
                     <tr key={q.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm font-medium text-blue-600">{q.number}</td>
+                      <td className="px-6 py-4 text-sm font-medium text-blue-600">
+  <a href={`/quotations/${q.id}`} className="hover:underline">{q.number}</a>
+</td>
                       <td className="px-6 py-4 text-sm text-gray-800">{getCustomerName(q.customerId)}</td>
                       <td className="px-6 py-4 text-sm text-gray-600">{new Date(q.expiryDate).toLocaleDateString()}</td>
                       <td className="px-6 py-4 text-sm font-semibold text-gray-900">AED {q.total.toFixed(2)}</td>
