@@ -58,3 +58,17 @@ model Invoice {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
+
+model Settings {
+  id           String   @id @default(cuid())
+  businessName String   @default("My Business")
+  email        String?
+  phone        String?
+  address      String?
+  website      String?
+  trn          String?
+  currency     String   @default("AED")
+  logoUrl      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
