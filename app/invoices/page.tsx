@@ -7,6 +7,14 @@ interface Customer {
   companyName: string | null
 }
 
+interface InvoiceItem {
+  id: string
+  description: string
+  quantity: number
+  rate: number
+  amount: number
+}
+
 interface Invoice {
   id: string
   number: string
@@ -17,6 +25,14 @@ interface Invoice {
   total: number
   amountPaid: number
   notes: string | null
+  items: InvoiceItem[]
+}
+
+interface LineItem {
+  description: string
+  quantity: string
+  rate: string
+  amount: number
 }
 
 export default function InvoicesPage() {
@@ -28,10 +44,12 @@ export default function InvoicesPage() {
   const [form, setForm] = useState({
     customerId: "",
     dueDate: "",
-    subtotal: "",
     tax: "",
     notes: ""
   })
+  const [items, setItems] = useState<LineItem[]>([
+    { description: "", quantity: "1", rate: "", amount: 0 }
+  ])
 
   useEffect(() => {
     fetchInvoices()
@@ -51,20 +69,56 @@ export default function InvoicesPage() {
     if (data.success) setCustomers(data.data)
   }
 
+  function updateItem(index: number, field: keyof LineItem, value: string) {
+    const updated = [...items]
+    updated[index] = { ...updated[index], [field]: value }
+    if (field === "quantity" || field === "rate") {
+      const qty = parseFloat(field === "quantity" ? value : updated[index].quantity) || 0
+      const rate = parseFloat(field === "rate" ? value : updated[index].rate) || 0
+      updated[index].amount = qty * rate
+    }
+    setItems(updated)
+  }
+
+  function addItem() {
+    setItems([...items, { description: "", quantity: "1", rate: "", amount: 0 }])
+  }
+
+  function removeItem(index: number) {
+    if (items.length === 1) return
+    setItems(items.filter((_, i) => i !== index))
+  }
+
+  const subtotal = items.reduce((sum, item) => sum + item.amount, 0)
+  const taxPercent = parseFloat(form.tax) || 0
+  const taxAmount = subtotal * taxPercent / 100
+  const total = subtotal + taxAmount
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
-    const subtotal = parseFloat(form.subtotal) || 0
-    const tax = parseFloat(form.tax) || 0
-    const total = subtotal + (subtotal * tax / 100)
     const res = await fetch("/api/invoices", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ customerId: form.customerId, dueDate: form.dueDate, subtotal, tax, total, notes: form.notes })
+      body: JSON.stringify({
+        customerId: form.customerId,
+        dueDate: form.dueDate,
+        subtotal,
+        tax: taxPercent,
+        total,
+        notes: form.notes,
+        items: items.map(item => ({
+          description: item.description,
+          quantity: parseFloat(item.quantity) || 1,
+          rate: parseFloat(item.rate) || 0,
+          amount: item.amount
+        }))
+      })
     })
     const data = await res.json()
     if (data.success) {
-      setForm({ customerId: "", dueDate: "", subtotal: "", tax: "", notes: "" })
+      setForm({ customerId: "", dueDate: "", tax: "", notes: "" })
+      setItems([{ description: "", quantity: "1", rate: "", amount: 0 }])
       setShowForm(false)
       fetchInvoices()
     }
@@ -123,11 +177,12 @@ export default function InvoicesPage() {
             <a href="/customers" className="flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-xl text-sm">👥 Customers</a>
             <a href="/quotations" className="flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-xl text-sm">📋 Quotations</a>
             <a href="/invoices" className="flex items-center gap-3 px-3 py-2 bg-blue-50 text-blue-600 rounded-xl font-medium text-sm">🧾 Invoices</a>
-            <a href="#" className="flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-xl text-sm">⚙️ Settings</a>
+            <a href="/settings" className="flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-xl text-sm">⚙️ Settings</a>
           </nav>
         </aside>
 
         <main className="flex-1 p-6">
+          {/* Stats */}
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="bg-white rounded-2xl border border-gray-200 p-5">
               <p className="text-sm text-gray-500">Total Invoices</p>
@@ -160,45 +215,161 @@ export default function InvoicesPage() {
           {showForm && (
             <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
               <h3 className="font-semibold text-gray-900 mb-4">New Invoice</h3>
-              <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer *</label>
-                  <select required value={form.customerId} onChange={e => setForm({...form, customerId: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">Customer select karo</option>
-                    {customers.map(c => (
-                      <option key={c.id} value={c.id}>{c.name} {c.companyName ? `- ${c.companyName}` : ""}</option>
-                    ))}
-                  </select>
+              <form onSubmit={handleSubmit} className="space-y-4">
+
+                {/* Customer + Date */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Customer *</label>
+                    <select
+                      required
+                      value={form.customerId}
+                      onChange={e => setForm({...form, customerId: e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Customer select karo</option>
+                      {customers.map(c => (
+                        <option key={c.id} value={c.id}>{c.name} {c.companyName ? `- ${c.companyName}` : ""}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Due Date *</label>
+                    <input
+                      required
+                      type="date"
+                      value={form.dueDate}
+                      onChange={e => setForm({...form, dueDate: e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
+
+                {/* Line Items */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Due Date *</label>
-                  <input required type="date" value={form.dueDate} onChange={e => setForm({...form, dueDate: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Items / Services</label>
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                          <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500">Description</th>
+                          <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500 w-20">Qty</th>
+                          <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500 w-28">Rate (AED)</th>
+                          <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500 w-28">Amount</th>
+                          <th className="w-10"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {items.map((item, index) => (
+                          <tr key={index} className="border-b border-gray-100">
+                            <td className="px-4 py-2">
+                              <input
+                                type="text"
+                                value={item.description}
+                                onChange={e => updateItem(index, "description", e.target.value)}
+                                placeholder="Service ya product ka naam"
+                                className="w-full px-2 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              />
+                            </td>
+                            <td className="px-4 py-2">
+                              <input
+                                type="number"
+                                value={item.quantity}
+                                onChange={e => updateItem(index, "quantity", e.target.value)}
+                                className="w-full px-2 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              />
+                            </td>
+                            <td className="px-4 py-2">
+                              <input
+                                type="number"
+                                value={item.rate}
+                                onChange={e => updateItem(index, "rate", e.target.value)}
+                                placeholder="0.00"
+                                className="w-full px-2 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              />
+                            </td>
+                            <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                              AED {item.amount.toFixed(2)}
+                            </td>
+                            <td className="px-2 py-2">
+                              <button
+                                type="button"
+                                onClick={() => removeItem(index)}
+                                className="text-red-400 hover:text-red-600 text-lg font-bold"
+                              >
+                                ×
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="px-4 py-2">
+                      <button
+                        type="button"
+                        onClick={addItem}
+                        className="text-blue-600 text-sm font-medium hover:text-blue-700"
+                      >
+                        + Add Item
+                      </button>
+                    </div>
+                  </div>
                 </div>
+
+                {/* Tax + Totals */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tax %</label>
+                    <input
+                      type="number"
+                      value={form.tax}
+                      onChange={e => setForm({...form, tax: e.target.value})}
+                      placeholder="5"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-4 text-sm">
+                    <div className="flex justify-between text-gray-600 mb-1">
+                      <span>Subtotal:</span>
+                      <span>AED {subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600 mb-1">
+                      <span>Tax ({taxPercent}%):</span>
+                      <span>AED {taxAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-gray-900 border-t border-gray-200 pt-1 mt-1">
+                      <span>Total:</span>
+                      <span>AED {total.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Subtotal (AED)</label>
-                  <input type="number" value={form.subtotal} onChange={e => setForm({...form, subtotal: e.target.value})}
-                    placeholder="0.00" className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tax %</label>
-                  <input type="number" value={form.tax} onChange={e => setForm({...form, tax: e.target.value})}
-                    placeholder="5" className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                  <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})}
-                    placeholder="Koi notes..." rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <textarea
+                    value={form.notes}
+                    onChange={e => setForm({...form, notes: e.target.value})}
+                    placeholder="Koi notes..."
+                    rows={2}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
-                <div className="col-span-2 flex gap-3">
-                  <button type="submit" disabled={saving}
-                    className="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50">
+
+                {/* Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50"
+                  >
                     {saving ? "Saving..." : "Save Invoice"}
                   </button>
-                  <button type="button" onClick={() => setShowForm(false)}
-                    className="border border-gray-300 text-gray-700 px-6 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition">
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(false)}
+                    className="border border-gray-300 text-gray-700 px-6 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition"
+                  >
                     Cancel
                   </button>
                 </div>
@@ -206,6 +377,7 @@ export default function InvoicesPage() {
             </div>
           )}
 
+          {/* Invoices Table */}
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
             {loading ? (
               <div className="p-8 text-center text-gray-500">Loading...</div>
@@ -230,9 +402,7 @@ export default function InvoicesPage() {
                   {invoices.map((inv) => (
                     <tr key={inv.id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="px-6 py-4 text-sm font-medium text-blue-600">
-                        <a href={`/invoices/${inv.id}`} className="hover:underline">
-                          {inv.number}
-                        </a>
+                        <a href={`/invoices/${inv.id}`} className="hover:underline">{inv.number}</a>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-800">{getCustomerName(inv.customerId)}</td>
                       <td className="px-6 py-4 text-sm text-gray-600">{new Date(inv.dueDate).toLocaleDateString()}</td>

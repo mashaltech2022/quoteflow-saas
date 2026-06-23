@@ -3,11 +3,12 @@ import { PrismaClient } from "@prisma/client"
 
 const prisma = new PrismaClient()
 
-// GET - Sab invoices lao
+// GET - Sab invoices lao (items ke saath)
 export async function GET() {
   try {
     const invoices = await prisma.invoice.findMany({
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
+      include: { items: true }
     })
     return NextResponse.json({ success: true, data: invoices })
   } catch (error) {
@@ -15,17 +16,16 @@ export async function GET() {
   }
 }
 
-// POST - Naya invoice banao
+// POST - Naya invoice banao (items ke saath)
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { customerId, dueDate, subtotal, tax, total, notes } = body
+    const { customerId, dueDate, subtotal, tax, total, notes, items } = body
 
     if (!customerId || !dueDate) {
       return NextResponse.json({ success: false, error: "Customer aur due date zaroor daalo" }, { status: 400 })
     }
 
-    // Auto number generate karo
     const count = await prisma.invoice.count()
     const number = `INV-${new Date().getFullYear()}-${String(count + 1).padStart(4, "0")}`
 
@@ -39,8 +39,17 @@ export async function POST(request: Request) {
         total: total || 0,
         amountPaid: 0,
         notes: notes || null,
-        status: "Unpaid"
-      }
+        status: "Unpaid",
+        items: {
+          create: (items || []).map((item: { description: string; quantity: number; rate: number; amount: number }) => ({
+            description: item.description,
+            quantity: item.quantity || 1,
+            rate: item.rate || 0,
+            amount: item.amount || 0
+          }))
+        }
+      },
+      include: { items: true }
     })
 
     return NextResponse.json({ success: true, data: invoice }, { status: 201 })
