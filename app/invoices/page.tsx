@@ -80,6 +80,23 @@ export default function InvoicesPage() {
     setSaving(false)
   }
 
+  async function markAsPaid(id: string, total: number) {
+    const res = await fetch(`/api/invoices/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "Paid", amountPaid: total })
+    })
+    const data = await res.json()
+    if (data.success) fetchInvoices()
+  }
+
+  async function deleteInvoice(id: string) {
+    if (!confirm("Yeh invoice delete karna chahte ho?")) return
+    const res = await fetch(`/api/invoices/${id}`, { method: "DELETE" })
+    const data = await res.json()
+    if (data.success) fetchInvoices()
+  }
+
   const statusStyle = (status: string) => {
     switch (status) {
       case "Paid": return "bg-green-100 text-green-700"
@@ -94,6 +111,11 @@ export default function InvoicesPage() {
     const c = customers.find(c => c.id === id)
     return c ? c.name : "-"
   }
+
+  // Stats
+  const totalRevenue = invoices.filter(i => i.status === "Paid").reduce((sum, i) => sum + i.total, 0)
+  const unpaidCount = invoices.filter(i => i.status === "Unpaid").length
+  const paidCount = invoices.filter(i => i.status === "Paid").length
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -116,6 +138,24 @@ export default function InvoicesPage() {
         </aside>
 
         <main className="flex-1 p-6">
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <p className="text-sm text-gray-500">Total Invoices</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">{invoices.length}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <p className="text-sm text-gray-500">Paid</p>
+              <p className="text-3xl font-bold text-green-600 mt-1">{paidCount}</p>
+              <p className="text-xs text-gray-400 mt-1">AED {totalRevenue.toFixed(2)}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <p className="text-sm text-gray-500">Unpaid</p>
+              <p className="text-3xl font-bold text-red-500 mt-1">{unpaidCount}</p>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-bold text-gray-900">Invoices</h2>
@@ -226,6 +266,7 @@ export default function InvoicesPage() {
                     <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Due Date</th>
                     <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Total</th>
                     <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                    <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -239,6 +280,24 @@ export default function InvoicesPage() {
                         <span className={`text-xs font-semibold px-2 py-1 rounded-full ${statusStyle(inv.status)}`}>
                           {inv.status}
                         </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-2">
+                          {inv.status !== "Paid" && (
+                            <button
+                              onClick={() => markAsPaid(inv.id, inv.total)}
+                              className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-lg hover:bg-green-200 transition font-medium"
+                            >
+                              ✓ Mark Paid
+                            </button>
+                          )}
+                          <button
+                            onClick={() => deleteInvoice(inv.id)}
+                            className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-lg hover:bg-red-200 transition font-medium"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
