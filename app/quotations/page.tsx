@@ -71,7 +71,6 @@ export default function QuotationsPage() {
   function updateItem(index: number, field: keyof LineItem, value: string) {
     const updated = [...items]
     updated[index] = { ...updated[index], [field]: value }
-    // Amount auto calculate karo
     if (field === "quantity" || field === "rate") {
       const qty = parseFloat(field === "quantity" ? value : updated[index].quantity) || 0
       const rate = parseFloat(field === "rate" ? value : updated[index].rate) || 0
@@ -187,7 +186,6 @@ export default function QuotationsPage() {
               <h3 className="font-semibold text-gray-900 mb-4">New Quotation</h3>
               <form onSubmit={handleSubmit} className="space-y-4">
 
-                {/* Customer + Date */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Customer *</label>
@@ -314,7 +312,6 @@ export default function QuotationsPage() {
                   </div>
                 </div>
 
-                {/* Notes */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                   <textarea
@@ -326,7 +323,6 @@ export default function QuotationsPage() {
                   />
                 </div>
 
-                {/* Buttons */}
                 <div className="flex gap-3">
                   <button
                     type="submit"
@@ -347,7 +343,6 @@ export default function QuotationsPage() {
             </div>
           )}
 
-          {/* Quotations Table */}
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
             {loading ? (
               <div className="p-8 text-center text-gray-500">Loading...</div>
