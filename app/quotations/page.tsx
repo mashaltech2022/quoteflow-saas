@@ -79,6 +79,13 @@ export default function QuotationsPage() {
     setSaving(false)
   }
 
+  async function deleteQuotation(id: string) {
+    if (!confirm("Yeh quotation delete karna chahte ho?")) return
+    const res = await fetch(`/api/quotations/${id}`, { method: "DELETE" })
+    const data = await res.json()
+    if (data.success) fetchQuotations()
+  }
+
   const statusStyle = (status: string) => {
     switch (status) {
       case "Draft": return "bg-gray-100 text-gray-600"
@@ -128,7 +135,6 @@ export default function QuotationsPage() {
             </button>
           </div>
 
-          {/* New Quotation Form */}
           {showForm && (
             <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
               <h3 className="font-semibold text-gray-900 mb-4">New Quotation</h3>
@@ -207,7 +213,6 @@ export default function QuotationsPage() {
             </div>
           )}
 
-          {/* Quotations Table */}
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
             {loading ? (
               <div className="p-8 text-center text-gray-500">Loading...</div>
@@ -225,6 +230,7 @@ export default function QuotationsPage() {
                     <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Expiry</th>
                     <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Total</th>
                     <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                    <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -238,6 +244,14 @@ export default function QuotationsPage() {
                         <span className={`text-xs font-semibold px-2 py-1 rounded-full ${statusStyle(q.status)}`}>
                           {q.status}
                         </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => deleteQuotation(q.id)}
+                          className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-lg hover:bg-red-200 transition font-medium"
+                        >
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   ))}

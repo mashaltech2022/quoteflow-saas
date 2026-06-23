@@ -47,6 +47,13 @@ export default function CustomersPage() {
     setSaving(false)
   }
 
+  async function deleteCustomer(id: string) {
+    if (!confirm("Yeh customer delete karna chahte ho?")) return
+    const res = await fetch(`/api/customers/${id}`, { method: "DELETE" })
+    const data = await res.json()
+    if (data.success) fetchCustomers()
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
@@ -172,6 +179,7 @@ export default function CustomersPage() {
                     <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Company</th>
                     <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Email</th>
                     <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Phone</th>
+                    <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -188,6 +196,14 @@ export default function CustomersPage() {
                       <td className="px-6 py-4 text-sm text-gray-600">{c.companyName || "-"}</td>
                       <td className="px-6 py-4 text-sm text-gray-600">{c.email || "-"}</td>
                       <td className="px-6 py-4 text-sm text-gray-600">{c.phone || "-"}</td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => deleteCustomer(c.id)}
+                          className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-lg hover:bg-red-200 transition font-medium"
+                        >
+                          Delete
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
