@@ -54,22 +54,13 @@ export default function InvoicesPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
-
     const subtotal = parseFloat(form.subtotal) || 0
     const tax = parseFloat(form.tax) || 0
     const total = subtotal + (subtotal * tax / 100)
-
     const res = await fetch("/api/invoices", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customerId: form.customerId,
-        dueDate: form.dueDate,
-        subtotal,
-        tax,
-        total,
-        notes: form.notes
-      })
+      body: JSON.stringify({ customerId: form.customerId, dueDate: form.dueDate, subtotal, tax, total, notes: form.notes })
     })
     const data = await res.json()
     if (data.success) {
@@ -112,7 +103,6 @@ export default function InvoicesPage() {
     return c ? c.name : "-"
   }
 
-  // Stats
   const totalRevenue = invoices.filter(i => i.status === "Paid").reduce((sum, i) => sum + i.total, 0)
   const unpaidCount = invoices.filter(i => i.status === "Unpaid").length
   const paidCount = invoices.filter(i => i.status === "Paid").length
@@ -138,8 +128,6 @@ export default function InvoicesPage() {
         </aside>
 
         <main className="flex-1 p-6">
-
-          {/* Stats */}
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="bg-white rounded-2xl border border-gray-200 p-5">
               <p className="text-sm text-gray-500">Total Invoices</p>
@@ -169,19 +157,14 @@ export default function InvoicesPage() {
             </button>
           </div>
 
-          {/* New Invoice Form */}
           {showForm && (
             <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
               <h3 className="font-semibold text-gray-900 mb-4">New Invoice</h3>
               <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Customer *</label>
-                  <select
-                    required
-                    value={form.customerId}
-                    onChange={e => setForm({...form, customerId: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
+                  <select required value={form.customerId} onChange={e => setForm({...form, customerId: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">Customer select karo</option>
                     {customers.map(c => (
                       <option key={c.id} value={c.id}>{c.name} {c.companyName ? `- ${c.companyName}` : ""}</option>
@@ -190,57 +173,32 @@ export default function InvoicesPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Due Date *</label>
-                  <input
-                    required
-                    type="date"
-                    value={form.dueDate}
-                    onChange={e => setForm({...form, dueDate: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <input required type="date" value={form.dueDate} onChange={e => setForm({...form, dueDate: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Subtotal (AED)</label>
-                  <input
-                    type="number"
-                    value={form.subtotal}
-                    onChange={e => setForm({...form, subtotal: e.target.value})}
-                    placeholder="0.00"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <input type="number" value={form.subtotal} onChange={e => setForm({...form, subtotal: e.target.value})}
+                    placeholder="0.00" className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tax %</label>
-                  <input
-                    type="number"
-                    value={form.tax}
-                    onChange={e => setForm({...form, tax: e.target.value})}
-                    placeholder="5"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <input type="number" value={form.tax} onChange={e => setForm({...form, tax: e.target.value})}
+                    placeholder="5" className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                  <textarea
-                    value={form.notes}
-                    onChange={e => setForm({...form, notes: e.target.value})}
-                    placeholder="Koi notes..."
-                    rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})}
+                    placeholder="Koi notes..." rows={3}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div className="col-span-2 flex gap-3">
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50"
-                  >
+                  <button type="submit" disabled={saving}
+                    className="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50">
                     {saving ? "Saving..." : "Save Invoice"}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowForm(false)}
-                    className="border border-gray-300 text-gray-700 px-6 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition"
-                  >
+                  <button type="button" onClick={() => setShowForm(false)}
+                    className="border border-gray-300 text-gray-700 px-6 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition">
                     Cancel
                   </button>
                 </div>
@@ -248,7 +206,6 @@ export default function InvoicesPage() {
             </div>
           )}
 
-          {/* Invoices Table */}
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
             {loading ? (
               <div className="p-8 text-center text-gray-500">Loading...</div>
@@ -272,7 +229,11 @@ export default function InvoicesPage() {
                 <tbody>
                   {invoices.map((inv) => (
                     <tr key={inv.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm font-medium text-blue-600">{inv.number}</td>
+                      <td className="px-6 py-4 text-sm font-medium text-blue-600">
+                        <a href={`/invoices/${inv.id}`} className="hover:underline">
+                          {inv.number}
+                        </a>
+                      </td>
                       <td className="px-6 py-4 text-sm text-gray-800">{getCustomerName(inv.customerId)}</td>
                       <td className="px-6 py-4 text-sm text-gray-600">{new Date(inv.dueDate).toLocaleDateString()}</td>
                       <td className="px-6 py-4 text-sm font-semibold text-gray-900">AED {inv.total.toFixed(2)}</td>
@@ -284,17 +245,13 @@ export default function InvoicesPage() {
                       <td className="px-6 py-4">
                         <div className="flex gap-2">
                           {inv.status !== "Paid" && (
-                            <button
-                              onClick={() => markAsPaid(inv.id, inv.total)}
-                              className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-lg hover:bg-green-200 transition font-medium"
-                            >
+                            <button onClick={() => markAsPaid(inv.id, inv.total)}
+                              className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-lg hover:bg-green-200 transition font-medium">
                               ✓ Mark Paid
                             </button>
                           )}
-                          <button
-                            onClick={() => deleteInvoice(inv.id)}
-                            className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-lg hover:bg-red-200 transition font-medium"
-                          >
+                          <button onClick={() => deleteInvoice(inv.id)}
+                            className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-lg hover:bg-red-200 transition font-medium">
                             Delete
                           </button>
                         </div>
