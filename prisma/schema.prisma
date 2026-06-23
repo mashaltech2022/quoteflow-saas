@@ -72,3 +72,36 @@ model Settings {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
+model Quotation {
+  id         String          @id @default(cuid())
+  number     String          @unique
+  customerId String
+  status     String          @default("Draft")
+  issueDate  DateTime        @default(now())
+  expiryDate DateTime
+  subtotal   Float           @default(0)
+  tax        Float           @default(0)
+  total      Float           @default(0)
+  notes      String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  items      QuotationItem[]          // ← yeh add karo
+}
+
+model Invoice {
+  id         String        @id @default(cuid())
+  number     String        @unique
+  customerId String
+  status     String        @default("Unpaid")
+  issueDate  DateTime      @default(now())
+  dueDate    DateTime
+  subtotal   Float         @default(0)
+  tax        Float         @default(0)
+  total      Float         @default(0)
+  amountPaid Float         @default(0)
+  notes      String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  items      InvoiceItem[]            // ← yeh add karo
+}
