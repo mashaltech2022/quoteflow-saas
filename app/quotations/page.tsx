@@ -1,4 +1,5 @@
 "use client"
+
 import { useState, useEffect } from "react"
 
 interface Customer {
@@ -27,12 +28,7 @@ interface Quotation {
   items: QuotationItem[]
 }
 
-interface LineItem {
-  description: string
-  quantity: string
-  rate: string
-  amount: number
-}
+s
 
 export default function QuotationsPage() {
   const [quotations, setQuotations] = useState<Quotation[]>([])
