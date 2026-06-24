@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
- url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -29,51 +29,6 @@ model Customer {
 }
 
 model Quotation {
-  id         String   @id @default(cuid())
-  number     String   @unique
-  customerId String
-  status     String   @default("Draft")
-  issueDate  DateTime @default(now())
-  expiryDate DateTime
-  subtotal   Float    @default(0)
-  tax        Float    @default(0)
-  total      Float    @default(0)
-  notes      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-}
-
-model Invoice {
-  id         String   @id @default(cuid())
-  number     String   @unique
-  customerId String
-  status     String   @default("Unpaid")
-  issueDate  DateTime @default(now())
-  dueDate    DateTime
-  subtotal   Float    @default(0)
-  tax        Float    @default(0)
-  total      Float    @default(0)
-  amountPaid Float    @default(0)
-  notes      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-}
-
-model Settings {
-  id           String   @id @default(cuid())
-  businessName String   @default("My Business")
-  email        String?
-  phone        String?
-  address      String?
-  website      String?
-  trn          String?
-  currency     String   @default("AED")
-  logoUrl      String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
-
-model Quotation {
   id         String          @id @default(cuid())
   number     String          @unique
   customerId String
@@ -86,7 +41,7 @@ model Quotation {
   notes      String?
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
-  items      QuotationItem[]          // ← yeh add karo
+  items      QuotationItem[]
 }
 
 model Invoice {
@@ -103,5 +58,41 @@ model Invoice {
   notes      String?
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
-  items      InvoiceItem[]            // ← yeh add karo
+  items      InvoiceItem[]
+}
+
+model Settings {
+  id           String   @id @default(cuid())
+  businessName String   @default("My Business")
+  email        String?
+  phone        String?
+  address      String?
+  website      String?
+  trn          String?
+  currency     String   @default("AED")
+  logoUrl      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model QuotationItem {
+  id          String    @id @default(cuid())
+  quotationId String
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Float     @default(1)
+  rate        Float     @default(0)
+  amount      Float     @default(0)
+  createdAt   DateTime  @default(now())
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Float    @default(1)
+  rate        Float    @default(0)
+  amount      Float    @default(0)
+  createdAt   DateTime @default(now())
 }
