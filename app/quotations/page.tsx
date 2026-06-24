@@ -28,7 +28,12 @@ interface Quotation {
   items: QuotationItem[]
 }
 
-s
+interface LineItem {
+  description: string
+  quantity: string
+  rate: string
+  amount: number
+}
 
 export default function QuotationsPage() {
   const [quotations, setQuotations] = useState<Quotation[]>([])
