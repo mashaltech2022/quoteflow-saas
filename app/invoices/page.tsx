@@ -22,6 +22,8 @@ interface Invoice {
   status: string
   issueDate: string
   dueDate: string
+  subtotal: number
+  tax: number
   total: number
   amountPaid: number
   notes: string | null
@@ -51,6 +53,7 @@ export default function InvoicesPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState({ customerId: "", dueDate: "", tax: "", notes: "" })
   const [items, setItems] = useState<LineItem[]>([{ description: "", quantity: "1", rate: "", amount: 0 }])
 
@@ -92,6 +95,40 @@ export default function InvoicesPage() {
     setItems(items.filter((_, i) => i !== index))
   }
 
+  function resetForm() {
+    setForm({ customerId: "", dueDate: "", tax: "", notes: "" })
+    setItems([{ description: "", quantity: "1", rate: "", amount: 0 }])
+    setEditingId(null)
+  }
+
+  // Edit mode — form ko invoice ke data se bhar do
+  function startEdit(inv: Invoice) {
+    setEditingId(inv.id)
+    setForm({
+      customerId: inv.customerId,
+      dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString().split("T")[0] : "",
+      tax: inv.tax ? String(inv.tax) : "",
+      notes: inv.notes || ""
+    })
+    if (inv.items && inv.items.length > 0) {
+      setItems(inv.items.map(it => ({
+        description: it.description,
+        quantity: String(it.quantity),
+        rate: String(it.rate),
+        amount: it.amount
+      })))
+    } else {
+      setItems([{ description: "", quantity: "1", rate: "", amount: 0 }])
+    }
+    setShowForm(true)
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  function openNewForm() {
+    resetForm()
+    setShowForm(true)
+  }
+
   const subtotal = items.reduce((sum, item) => sum + item.amount, 0)
   const taxPercent = parseFloat(form.tax) || 0
   const taxAmount = subtotal * taxPercent / 100
@@ -100,30 +137,44 @@ export default function InvoicesPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
-    const res = await fetch("/api/invoices", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customerId: form.customerId,
-        dueDate: form.dueDate,
-        subtotal,
-        tax: taxPercent,
-        total,
-        notes: form.notes,
-        items: items.map(item => ({
-          description: item.description,
-          quantity: parseFloat(item.quantity) || 1,
-          rate: parseFloat(item.rate) || 0,
-          amount: item.amount
-        }))
+
+    const payload = {
+      customerId: form.customerId,
+      dueDate: form.dueDate,
+      subtotal,
+      tax: taxPercent,
+      total,
+      notes: form.notes,
+      items: items.map(item => ({
+        description: item.description,
+        quantity: parseFloat(item.quantity) || 1,
+        rate: parseFloat(item.rate) || 0,
+        amount: item.amount
+      }))
+    }
+
+    let res
+    if (editingId) {
+      res = await fetch(`/api/invoices/${editingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
       })
-    })
+    } else {
+      res = await fetch("/api/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+    }
+
     const data = await res.json()
     if (data.success) {
-      setForm({ customerId: "", dueDate: "", tax: "", notes: "" })
-      setItems([{ description: "", quantity: "1", rate: "", amount: 0 }])
+      resetForm()
       setShowForm(false)
       fetchInvoices()
+    } else {
+      alert("Kuch masla ho gaya — dobara try karo")
     }
     setSaving(false)
   }
@@ -217,7 +268,7 @@ export default function InvoicesPage() {
               <h2 className="text-base font-semibold text-gray-900">Invoices</h2>
               <p className="text-xs text-gray-400">{invoices.length} total invoices</p>
             </div>
-            <button onClick={() => setShowForm(!showForm)}
+            <button onClick={openNewForm}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition shadow-sm">
               + New Invoice
             </button>
@@ -252,7 +303,7 @@ export default function InvoicesPage() {
 
             {showForm && (
               <div className="rise bg-white rounded-2xl border border-gray-200 p-6 mb-6 shadow-sm">
-                <h3 className="font-semibold text-gray-900 mb-4">New Invoice</h3>
+                <h3 className="font-semibold text-gray-900 mb-4">{editingId ? "Edit Invoice" : "New Invoice"}</h3>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   {/* Customer + Date */}
                   <div className="grid grid-cols-2 gap-4">
@@ -363,9 +414,9 @@ export default function InvoicesPage() {
                   <div className="flex gap-3">
                     <button type="submit" disabled={saving}
                       className="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50">
-                      {saving ? "Saving..." : "Save Invoice"}
+                      {saving ? "Saving..." : editingId ? "Update Invoice" : "Save Invoice"}
                     </button>
-                    <button type="button" onClick={() => setShowForm(false)}
+                    <button type="button" onClick={() => { resetForm(); setShowForm(false) }}
                       className="border border-gray-300 text-gray-700 px-6 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition">
                       Cancel
                     </button>
@@ -418,6 +469,10 @@ export default function InvoicesPage() {
                                 ✓ Mark Paid
                               </button>
                             )}
+                            <button onClick={() => startEdit(inv)}
+                              className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-lg hover:bg-blue-200 transition font-medium">
+                              Edit
+                            </button>
                             <button onClick={() => deleteInvoice(inv.id)}
                               className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-lg hover:bg-red-200 transition font-medium">
                               Delete
