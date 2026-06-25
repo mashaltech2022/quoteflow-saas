@@ -5,6 +5,8 @@ interface Customer {
   id: string
   name: string
   companyName: string | null
+  email: string | null
+  phone: string | null
 }
 
 interface InvoiceItem {
@@ -54,6 +56,7 @@ export default function InvoicesPage() {
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [remindingId, setRemindingId] = useState<string | null>(null)
   const [form, setForm] = useState({ customerId: "", dueDate: "", tax: "", notes: "" })
   const [items, setItems] = useState<LineItem[]>([{ description: "", quantity: "1", rate: "", amount: 0 }])
 
@@ -194,6 +197,43 @@ export default function InvoicesPage() {
     const res = await fetch(`/api/invoices/${id}`, { method: "DELETE" })
     const data = await res.json()
     if (data.success) fetchInvoices()
+  }
+
+  // List se hi reminder bhejo
+  async function sendReminder(inv: Invoice) {
+    const cust = customers.find(c => c.id === inv.customerId)
+    if (!cust) { alert("Customer nahi mila"); return }
+    if (!cust.email) { alert(`${cust.name} ka email nahi hai!`); return }
+    if (!confirm(`${cust.name} ko payment reminder bhejein?`)) return
+
+    setRemindingId(inv.id)
+    // Settings fetch (business info ke liye)
+    const sRes = await fetch("/api/settings")
+    const sData = await sRes.json()
+    const settings = sData.success ? sData.data : null
+
+    const res = await fetch("/api/send-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: cust.email,
+        type: "reminder",
+        number: inv.number,
+        customerName: cust.name,
+        total: inv.total.toFixed(2),
+        dueDate: new Date(inv.dueDate).toLocaleDateString(),
+        businessName: settings?.businessName,
+        businessEmail: settings?.email,
+        businessPhone: settings?.phone
+      })
+    })
+    const data = await res.json()
+    if (data.success) {
+      alert(`Reminder ${cust.email} pe bhej diya gaya!`)
+    } else {
+      alert("Reminder send nahi hua — dobara try karo")
+    }
+    setRemindingId(null)
   }
 
   const statusStyle = (status: string) => {
@@ -462,11 +502,17 @@ export default function InvoicesPage() {
                           <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusStyle(inv.status)}`}>{inv.status}</span>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 flex-wrap">
                             {inv.status !== "Paid" && (
                               <button onClick={() => markAsPaid(inv.id, inv.total)}
                                 className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-lg hover:bg-green-200 transition font-medium">
                                 ✓ Mark Paid
+                              </button>
+                            )}
+                            {inv.status !== "Paid" && (
+                              <button onClick={() => sendReminder(inv)} disabled={remindingId === inv.id}
+                                className="text-xs bg-orange-100 text-orange-700 px-3 py-1 rounded-lg hover:bg-orange-200 transition font-medium disabled:opacity-50">
+                                {remindingId === inv.id ? "Sending..." : "🔔 Reminder"}
                               </button>
                             )}
                             <button onClick={() => startEdit(inv)}
