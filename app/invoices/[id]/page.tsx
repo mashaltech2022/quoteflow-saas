@@ -2,6 +2,14 @@
 import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 
+interface InvoiceItem {
+  id: string
+  description: string
+  quantity: number
+  rate: number
+  amount: number
+}
+
 interface Invoice {
   id: string
   number: string
@@ -14,6 +22,7 @@ interface Invoice {
   total: number
   amountPaid: number
   notes: string | null
+  items: InvoiceItem[]
 }
 
 interface Customer {
@@ -58,24 +67,21 @@ export default function InvoiceDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Print hide hoga yeh bar */}
       <div className="print:hidden bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <a href="/invoices" className="text-blue-600 hover:underline text-sm">← Back to Invoices</a>
+          <a href="/invoices" className="text-blue-600 hover:underline text-sm">Back to Invoices</a>
           <h1 className="text-xl font-bold text-gray-900">Invoice {invoice.number}</h1>
         </div>
         <button
           onClick={() => window.print()}
           className="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition"
         >
-          🖨️ Print / Save PDF
+          Print / Save PDF
         </button>
       </div>
 
-      {/* Invoice Content - Print mein yeh dikhega */}
       <div className="max-w-3xl mx-auto p-8">
 
-        {/* Header */}
         <div className="bg-gray-900 text-white p-8 rounded-t-2xl flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold">QuoteFlow</h1>
@@ -94,11 +100,10 @@ export default function InvoiceDetailPage() {
           </div>
         </div>
 
-        {/* Dates */}
         <div className="bg-gray-100 px-8 py-4 flex gap-8">
           <div>
             <p className="text-xs text-gray-500 uppercase">Issue Date</p>
-            <p className="font-semibold">{new Date(invoice.issueDate).toLocaleDateString()}</p>
+            <p className="font-semibold text-gray-800">{new Date(invoice.issueDate).toLocaleDateString()}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase">Due Date</p>
@@ -106,7 +111,6 @@ export default function InvoiceDetailPage() {
           </div>
         </div>
 
-        {/* Bill To */}
         <div className="bg-white px-8 py-6 border-b border-gray-200">
           <p className="text-xs text-gray-500 uppercase mb-2">Bill To</p>
           {customer ? (
@@ -122,25 +126,38 @@ export default function InvoiceDetailPage() {
           )}
         </div>
 
-        {/* Items Table */}
         <div className="bg-white px-8 py-6 border-b border-gray-200">
           <table className="w-full">
             <thead>
               <tr className="border-b-2 border-gray-900">
                 <th className="text-left py-2 text-sm font-semibold text-gray-700">Description</th>
+                <th className="text-right py-2 text-sm font-semibold text-gray-700">Qty</th>
+                <th className="text-right py-2 text-sm font-semibold text-gray-700">Rate</th>
                 <th className="text-right py-2 text-sm font-semibold text-gray-700">Amount</th>
               </tr>
             </thead>
             <tbody>
-              <tr className="border-b border-gray-100">
-                <td className="py-3 text-gray-800">Services</td>
-                <td className="py-3 text-right text-gray-800">AED {invoice.subtotal.toFixed(2)}</td>
-              </tr>
+              {invoice.items && invoice.items.length > 0 ? (
+                invoice.items.map((item) => (
+                  <tr key={item.id} className="border-b border-gray-100">
+                    <td className="py-3 text-gray-800">{item.description}</td>
+                    <td className="py-3 text-right text-gray-600">{item.quantity}</td>
+                    <td className="py-3 text-right text-gray-600">AED {item.rate.toFixed(2)}</td>
+                    <td className="py-3 text-right text-gray-800">AED {item.amount.toFixed(2)}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr className="border-b border-gray-100">
+                  <td className="py-3 text-gray-800">Services</td>
+                  <td className="py-3 text-right text-gray-600">1</td>
+                  <td className="py-3 text-right text-gray-600">AED {invoice.subtotal.toFixed(2)}</td>
+                  <td className="py-3 text-right text-gray-800">AED {invoice.subtotal.toFixed(2)}</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
 
-        {/* Totals */}
         <div className="bg-white px-8 py-6 border-b border-gray-200">
           <div className="flex justify-end">
             <div className="w-64">
@@ -152,7 +169,7 @@ export default function InvoiceDetailPage() {
                 <span>Tax ({invoice.tax}%)</span>
                 <span>AED {(invoice.total - invoice.subtotal).toFixed(2)}</span>
               </div>
-              <div className="flex justify-between py-3 font-bold text-lg border-t-2 border-gray-900 mt-2">
+              <div className="flex justify-between py-3 font-bold text-lg border-t-2 border-gray-900 mt-2 text-gray-900">
                 <span>Total</span>
                 <span>AED {invoice.total.toFixed(2)}</span>
               </div>
@@ -166,7 +183,6 @@ export default function InvoiceDetailPage() {
           </div>
         </div>
 
-        {/* Notes */}
         {invoice.notes && (
           <div className="bg-white px-8 py-6 border-b border-gray-200">
             <p className="text-xs text-gray-500 uppercase mb-2">Notes</p>
@@ -174,7 +190,6 @@ export default function InvoiceDetailPage() {
           </div>
         )}
 
-        {/* Footer */}
         <div className="bg-gray-900 text-white px-8 py-4 rounded-b-2xl text-center">
           <p className="text-gray-400 text-sm">Thank you for your business!</p>
           <p className="text-gray-500 text-xs mt-1">Generated by QuoteFlow</p>
