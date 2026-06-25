@@ -52,6 +52,8 @@ export default function InvoiceDetailPage() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
+  const [remindering, setRemindering] = useState(false)
+  const [reminded, setReminded] = useState(false)
 
   useEffect(() => {
     fetchInvoice()
@@ -116,6 +118,40 @@ export default function InvoiceDetailPage() {
     setSending(false)
   }
 
+  async function sendReminder() {
+    if (!invoice || !customer) return
+    if (!customer.email) {
+      alert("Customer ka email nahi hai!")
+      return
+    }
+    if (!confirm(`${customer.name} ko payment reminder bhejein?`)) return
+    setRemindering(true)
+    const res = await fetch("/api/send-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: customer.email,
+        type: "reminder",
+        number: invoice.number,
+        customerName: customer.name,
+        total: invoice.total.toFixed(2),
+        dueDate: new Date(invoice.dueDate).toLocaleDateString(),
+        businessName: settings?.businessName,
+        businessEmail: settings?.email,
+        businessPhone: settings?.phone
+      })
+    })
+    const data = await res.json()
+    if (data.success) {
+      setReminded(true)
+      alert(`Reminder ${customer.email} pe bhej diya gaya!`)
+      setTimeout(() => setReminded(false), 5000)
+    } else {
+      alert("Reminder send nahi hua — dobara try karo")
+    }
+    setRemindering(false)
+  }
+
   if (loading) return <div className="p-8 text-center text-gray-400">Loading...</div>
   if (!invoice) return <div className="p-8 text-center text-gray-500">Invoice not found</div>
 
@@ -136,6 +172,12 @@ export default function InvoiceDetailPage() {
           <h1 className="text-xl font-bold text-gray-900">Invoice {invoice.number}</h1>
         </div>
         <div className="flex gap-3">
+          {invoice.status !== "Paid" && (
+            <button onClick={sendReminder} disabled={remindering || !customer?.email}
+              className="bg-red-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-red-700 transition disabled:opacity-50">
+              {remindering ? "Sending..." : reminded ? "✅ Reminded!" : "🔔 Send Reminder"}
+            </button>
+          )}
           <button onClick={sendEmail} disabled={sending || !customer?.email}
             className="bg-purple-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-purple-700 transition disabled:opacity-50">
             {sending ? "Sending..." : sent ? "✅ Sent!" : "📧 Send Email"}
