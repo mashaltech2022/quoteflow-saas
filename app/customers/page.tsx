@@ -194,12 +194,12 @@ export default function CustomersPage() {
                     {customers.map((c) => (
                       <tr key={c.id} className="border-b border-gray-100 hover:bg-blue-50/30 transition">
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
+                          <a href={`/customers/${c.id}`} className="flex items-center gap-3 group">
                             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-xs font-bold">
                               {c.name.charAt(0)}
                             </div>
-                            <span className="text-sm font-medium text-gray-900">{c.name}</span>
-                          </div>
+                            <span className="text-sm font-medium text-blue-600 group-hover:underline">{c.name}</span>
+                          </a>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">{c.companyName || "-"}</td>
                         <td className="px-6 py-4 text-sm text-gray-600">{c.email || "-"}</td>
