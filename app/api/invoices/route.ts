@@ -3,9 +3,22 @@ import { PrismaClient } from "@prisma/client"
 
 const prisma = new PrismaClient()
 
-// GET - Sab invoices lao (items ke saath)
+// GET - Sab invoices lao (items ke saath) + overdue auto-mark
 export async function GET() {
   try {
+    // Step 1: jin invoices ki due date nikal gayi aur abhi bhi Unpaid hain, unhe Overdue karo
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    await prisma.invoice.updateMany({
+      where: {
+        status: "Unpaid",
+        dueDate: { lt: today }
+      },
+      data: { status: "Overdue" }
+    })
+
+    // Step 2: ab saare invoices fetch karo (updated status ke saath)
     const invoices = await prisma.invoice.findMany({
       orderBy: { createdAt: "desc" },
       include: { items: true }
