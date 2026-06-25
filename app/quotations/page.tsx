@@ -22,6 +22,8 @@ interface Quotation {
   status: string
   issueDate: string
   expiryDate: string
+  subtotal: number
+  tax: number
   total: number
   notes: string | null
   items: QuotationItem[]
@@ -48,6 +50,7 @@ export default function QuotationsPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState({ customerId: "", expiryDate: "", tax: "", notes: "" })
   const [items, setItems] = useState<LineItem[]>([{ description: "", quantity: "1", rate: "", amount: 0 }])
 
@@ -89,6 +92,40 @@ export default function QuotationsPage() {
     setItems(items.filter((_, i) => i !== index))
   }
 
+  function resetForm() {
+    setForm({ customerId: "", expiryDate: "", tax: "", notes: "" })
+    setItems([{ description: "", quantity: "1", rate: "", amount: 0 }])
+    setEditingId(null)
+  }
+
+  // Edit mode — form ko quotation ke data se bhar do
+  function startEdit(q: Quotation) {
+    setEditingId(q.id)
+    setForm({
+      customerId: q.customerId,
+      expiryDate: q.expiryDate ? new Date(q.expiryDate).toISOString().split("T")[0] : "",
+      tax: q.tax ? String(q.tax) : "",
+      notes: q.notes || ""
+    })
+    if (q.items && q.items.length > 0) {
+      setItems(q.items.map(it => ({
+        description: it.description,
+        quantity: String(it.quantity),
+        rate: String(it.rate),
+        amount: it.amount
+      })))
+    } else {
+      setItems([{ description: "", quantity: "1", rate: "", amount: 0 }])
+    }
+    setShowForm(true)
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  function openNewForm() {
+    resetForm()
+    setShowForm(true)
+  }
+
   const subtotal = items.reduce((sum, item) => sum + item.amount, 0)
   const taxPercent = parseFloat(form.tax) || 0
   const taxAmount = subtotal * taxPercent / 100
@@ -97,30 +134,46 @@ export default function QuotationsPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
-    const res = await fetch("/api/quotations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customerId: form.customerId,
-        expiryDate: form.expiryDate,
-        subtotal,
-        tax: taxPercent,
-        total,
-        notes: form.notes,
-        items: items.map(item => ({
-          description: item.description,
-          quantity: parseFloat(item.quantity) || 1,
-          rate: parseFloat(item.rate) || 0,
-          amount: item.amount
-        }))
+
+    const payload = {
+      customerId: form.customerId,
+      expiryDate: form.expiryDate,
+      subtotal,
+      tax: taxPercent,
+      total,
+      notes: form.notes,
+      items: items.map(item => ({
+        description: item.description,
+        quantity: parseFloat(item.quantity) || 1,
+        rate: parseFloat(item.rate) || 0,
+        amount: item.amount
+      }))
+    }
+
+    let res
+    if (editingId) {
+      // EDIT — PUT request
+      res = await fetch(`/api/quotations/${editingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
       })
-    })
+    } else {
+      // NEW — POST request
+      res = await fetch("/api/quotations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+    }
+
     const data = await res.json()
     if (data.success) {
-      setForm({ customerId: "", expiryDate: "", tax: "", notes: "" })
-      setItems([{ description: "", quantity: "1", rate: "", amount: 0 }])
+      resetForm()
       setShowForm(false)
       fetchQuotations()
+    } else {
+      alert("Kuch masla ho gaya — dobara try karo")
     }
     setSaving(false)
   }
@@ -201,7 +254,7 @@ export default function QuotationsPage() {
               <h2 className="text-base font-semibold text-gray-900">Quotations</h2>
               <p className="text-xs text-gray-400">{quotations.length} total quotations</p>
             </div>
-            <button onClick={() => setShowForm(!showForm)}
+            <button onClick={openNewForm}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition shadow-sm">
               + New Quotation
             </button>
@@ -210,7 +263,7 @@ export default function QuotationsPage() {
           <div className="p-6">
             {showForm && (
               <div className="rise bg-white rounded-2xl border border-gray-200 p-6 mb-6 shadow-sm">
-                <h3 className="font-semibold text-gray-900 mb-4">New Quotation</h3>
+                <h3 className="font-semibold text-gray-900 mb-4">{editingId ? "Edit Quotation" : "New Quotation"}</h3>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -256,7 +309,7 @@ export default function QuotationsPage() {
                                   className="w-full px-2 py-1 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500" />
                               </td>
                               <td className="px-4 py-2">
-                               <input type="number" value={item.quantity}
+                                <input type="number" value={item.quantity}
                                   onChange={e => updateItem(index, "quantity", e.target.value)}
                                   className="w-full px-2 py-1 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500" />
                               </td>
@@ -318,9 +371,9 @@ export default function QuotationsPage() {
                   <div className="flex gap-3">
                     <button type="submit" disabled={saving}
                       className="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50">
-                      {saving ? "Saving..." : "Save Quotation"}
+                      {saving ? "Saving..." : editingId ? "Update Quotation" : "Save Quotation"}
                     </button>
-                    <button type="button" onClick={() => setShowForm(false)}
+                    <button type="button" onClick={() => { resetForm(); setShowForm(false) }}
                       className="border border-gray-300 text-gray-700 px-6 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition">
                       Cancel
                     </button>
@@ -365,10 +418,16 @@ export default function QuotationsPage() {
                           <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusStyle(q.status)}`}>{q.status}</span>
                         </td>
                         <td className="px-6 py-4">
-                          <button onClick={() => deleteQuotation(q.id)}
-                            className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-lg hover:bg-red-200 transition font-medium">
-                            Delete
-                          </button>
+                          <div className="flex gap-2">
+                            <button onClick={() => startEdit(q)}
+                              className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-lg hover:bg-blue-200 transition font-medium">
+                              Edit
+                            </button>
+                            <button onClick={() => deleteQuotation(q.id)}
+                              className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-lg hover:bg-red-200 transition font-medium">
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
