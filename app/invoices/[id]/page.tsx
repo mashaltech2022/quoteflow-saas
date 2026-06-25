@@ -38,6 +38,10 @@ interface Settings {
   businessName: string
   email: string | null
   phone: string | null
+  address: string | null
+  website: string | null
+  trn: string | null
+  logoUrl: string | null
 }
 
 export default function InvoiceDetailPage() {
@@ -112,149 +116,171 @@ export default function InvoiceDetailPage() {
     setSending(false)
   }
 
-  if (loading) return <div className="p-8 text-center">Loading...</div>
-  if (!invoice) return <div className="p-8 text-center">Invoice not found</div>
+  if (loading) return <div className="p-8 text-center text-gray-400">Loading...</div>
+  if (!invoice) return <div className="p-8 text-center text-gray-500">Invoice not found</div>
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <style>{`
+        @media print {
+          .print\\:hidden { display: none !important; }
+          body { background: white !important; }
+          .invoice-sheet { box-shadow: none !important; margin: 0 !important; max-width: 100% !important; }
+        }
+      `}</style>
+
+      {/* Top action bar (hidden in print) */}
       <div className="print:hidden bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <a href="/invoices" className="text-blue-600 hover:underline text-sm">← Back to Invoices</a>
           <h1 className="text-xl font-bold text-gray-900">Invoice {invoice.number}</h1>
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={sendEmail}
-            disabled={sending || !customer?.email}
-            className="bg-purple-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-purple-700 transition disabled:opacity-50"
-          >
+          <button onClick={sendEmail} disabled={sending || !customer?.email}
+            className="bg-purple-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-purple-700 transition disabled:opacity-50">
             {sending ? "Sending..." : sent ? "✅ Sent!" : "📧 Send Email"}
           </button>
-          <button
-            onClick={() => window.print()}
-            className="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition"
-          >
+          <button onClick={() => window.print()}
+            className="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition">
             🖨️ Print / Save PDF
           </button>
         </div>
       </div>
 
       <div className="max-w-3xl mx-auto p-8">
+        <div className="invoice-sheet bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-200">
 
-        <div className="bg-gray-900 text-white p-8 rounded-t-2xl flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold">{settings?.businessName || "QuoteFlow"}</h1>
-            <p className="text-gray-400 mt-1">Professional Invoice</p>
+          {/* Header — business logo + name */}
+          <div className="bg-gray-900 text-white p-8 flex justify-between items-start gap-6">
+            <div className="flex items-start gap-4">
+              {settings?.logoUrl && (
+                <img src={settings.logoUrl} alt="Logo" className="h-16 w-16 object-contain bg-white rounded-lg p-1" />
+              )}
+              <div>
+                <h1 className="text-2xl font-bold">{settings?.businessName || "QuoteFlow"}</h1>
+                {settings?.address && <p className="text-gray-400 text-sm mt-1 whitespace-pre-line">{settings.address}</p>}
+                {settings?.phone && <p className="text-gray-400 text-sm">{settings.phone}</p>}
+                {settings?.email && <p className="text-gray-400 text-sm">{settings.email}</p>}
+                {settings?.trn && <p className="text-gray-400 text-sm mt-1">TRN: {settings.trn}</p>}
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-gray-400 text-sm">TAX INVOICE</p>
+              <p className="text-2xl font-bold mt-1">{invoice.number}</p>
+              <span className={`text-xs font-semibold px-3 py-1 rounded-full mt-2 inline-block ${
+                invoice.status === "Paid" ? "bg-green-500 text-white" :
+                invoice.status === "Unpaid" ? "bg-gray-500 text-white" :
+                "bg-red-500 text-white"
+              }`}>
+                {invoice.status}
+              </span>
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-gray-400 text-sm">TAX INVOICE</p>
-            <p className="text-2xl font-bold mt-1">{invoice.number}</p>
-            <span className={`text-xs font-semibold px-3 py-1 rounded-full mt-2 inline-block ${
-              invoice.status === "Paid" ? "bg-green-500 text-white" :
-              invoice.status === "Unpaid" ? "bg-gray-500 text-white" :
-              "bg-red-500 text-white"
-            }`}>
-              {invoice.status}
-            </span>
-          </div>
-        </div>
 
-        <div className="bg-gray-100 px-8 py-4 flex gap-8">
-          <div>
-            <p className="text-xs text-gray-500 uppercase">Issue Date</p>
-            <p className="font-semibold text-gray-800">{new Date(invoice.issueDate).toLocaleDateString()}</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 uppercase">Due Date</p>
-            <p className="font-semibold text-red-600">{new Date(invoice.dueDate).toLocaleDateString()}</p>
-          </div>
-        </div>
-
-        <div className="bg-white px-8 py-6 border-b border-gray-200">
-          <p className="text-xs text-gray-500 uppercase mb-2">Bill To</p>
-          {customer ? (
+          {/* Dates */}
+          <div className="bg-gray-100 px-8 py-4 flex gap-8">
             <div>
-              <p className="font-bold text-gray-900 text-lg">{customer.name}</p>
-              {customer.companyName && <p className="text-gray-600">{customer.companyName}</p>}
-              {customer.email && <p className="text-gray-600">{customer.email}</p>}
-              {customer.phone && <p className="text-gray-600">{customer.phone}</p>}
-              {customer.address && <p className="text-gray-600">{customer.address}</p>}
+              <p className="text-xs text-gray-500 uppercase">Issue Date</p>
+              <p className="font-semibold text-gray-800">{new Date(invoice.issueDate).toLocaleDateString()}</p>
             </div>
-          ) : (
-            <p className="text-gray-500">Customer not found</p>
-          )}
-        </div>
-
-        <div className="bg-white px-8 py-6 border-b border-gray-200">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b-2 border-gray-900">
-                <th className="text-left py-2 text-sm font-semibold text-gray-700">Description</th>
-                <th className="text-right py-2 text-sm font-semibold text-gray-700">Qty</th>
-                <th className="text-right py-2 text-sm font-semibold text-gray-700">Rate</th>
-                <th className="text-right py-2 text-sm font-semibold text-gray-700">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoice.items && invoice.items.length > 0 ? (
-                invoice.items.map((item) => (
-                  <tr key={item.id} className="border-b border-gray-100">
-                    <td className="py-3 text-gray-800">{item.description}</td>
-                    <td className="py-3 text-right text-gray-600">{item.quantity}</td>
-                    <td className="py-3 text-right text-gray-600">AED {item.rate.toFixed(2)}</td>
-                    <td className="py-3 text-right text-gray-800">AED {item.amount.toFixed(2)}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr className="border-b border-gray-100">
-                  <td className="py-3 text-gray-800">Services</td>
-                  <td className="py-3 text-right text-gray-600">1</td>
-                  <td className="py-3 text-right text-gray-600">AED {invoice.subtotal.toFixed(2)}</td>
-                  <td className="py-3 text-right text-gray-800">AED {invoice.subtotal.toFixed(2)}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="bg-white px-8 py-6 border-b border-gray-200">
-          <div className="flex justify-end">
-            <div className="w-64">
-              <div className="flex justify-between py-2 text-gray-600">
-                <span>Subtotal</span>
-                <span>AED {invoice.subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between py-2 text-gray-600">
-                <span>Tax ({invoice.tax}%)</span>
-                <span>AED {(invoice.total - invoice.subtotal).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between py-3 font-bold text-lg border-t-2 border-gray-900 mt-2 text-gray-900">
-                <span>Total</span>
-                <span>AED {invoice.total.toFixed(2)}</span>
-              </div>
-              {invoice.status === "Paid" && (
-                <div className="flex justify-between py-2 text-green-600 font-semibold">
-                  <span>Amount Paid</span>
-                  <span>AED {invoice.amountPaid.toFixed(2)}</span>
-                </div>
-              )}
+            <div>
+              <p className="text-xs text-gray-500 uppercase">Due Date</p>
+              <p className="font-semibold text-red-600">{new Date(invoice.dueDate).toLocaleDateString()}</p>
             </div>
           </div>
-        </div>
 
-        {invoice.notes && (
+          {/* Bill To */}
           <div className="bg-white px-8 py-6 border-b border-gray-200">
-            <p className="text-xs text-gray-500 uppercase mb-2">Notes</p>
-            <p className="text-gray-700">{invoice.notes}</p>
+            <p className="text-xs text-gray-500 uppercase mb-2">Bill To</p>
+            {customer ? (
+              <div>
+                <p className="font-bold text-gray-900 text-lg">{customer.name}</p>
+                {customer.companyName && <p className="text-gray-600">{customer.companyName}</p>}
+                {customer.email && <p className="text-gray-600">{customer.email}</p>}
+                {customer.phone && <p className="text-gray-600">{customer.phone}</p>}
+                {customer.address && <p className="text-gray-600">{customer.address}</p>}
+              </div>
+            ) : (
+              <p className="text-gray-500">Customer not found</p>
+            )}
           </div>
-        )}
 
-        <div className="bg-gray-900 text-white px-8 py-4 rounded-b-2xl text-center">
-          <p className="text-gray-400 text-sm">Thank you for your business!</p>
-          {settings?.email && <p className="text-gray-500 text-xs mt-1">{settings.email}</p>}
-          {settings?.phone && <p className="text-gray-500 text-xs">{settings.phone}</p>}
+          {/* Items */}
+          <div className="bg-white px-8 py-6 border-b border-gray-200">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b-2 border-gray-900">
+                  <th className="text-left py-2 text-sm font-semibold text-gray-700">Description</th>
+                  <th className="text-right py-2 text-sm font-semibold text-gray-700">Qty</th>
+                  <th className="text-right py-2 text-sm font-semibold text-gray-700">Rate</th>
+                  <th className="text-right py-2 text-sm font-semibold text-gray-700">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoice.items && invoice.items.length > 0 ? (
+                  invoice.items.map((item) => (
+                    <tr key={item.id} className="border-b border-gray-100">
+                      <td className="py-3 text-gray-800">{item.description}</td>
+                      <td className="py-3 text-right text-gray-600">{item.quantity}</td>
+                      <td className="py-3 text-right text-gray-600">AED {item.rate.toFixed(2)}</td>
+                      <td className="py-3 text-right text-gray-800">AED {item.amount.toFixed(2)}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr className="border-b border-gray-100">
+                    <td className="py-3 text-gray-800">Services</td>
+                    <td className="py-3 text-right text-gray-600">1</td>
+                    <td className="py-3 text-right text-gray-600">AED {invoice.subtotal.toFixed(2)}</td>
+                    <td className="py-3 text-right text-gray-800">AED {invoice.subtotal.toFixed(2)}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Totals */}
+          <div className="bg-white px-8 py-6 border-b border-gray-200">
+            <div className="flex justify-end">
+              <div className="w-64">
+                <div className="flex justify-between py-2 text-gray-600">
+                  <span>Subtotal</span>
+                  <span>AED {invoice.subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between py-2 text-gray-600">
+                  <span>Tax ({invoice.tax}%)</span>
+                  <span>AED {(invoice.total - invoice.subtotal).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between py-3 font-bold text-lg border-t-2 border-gray-900 mt-2 text-gray-900">
+                  <span>Total</span>
+                  <span>AED {invoice.total.toFixed(2)}</span>
+                </div>
+                {invoice.status === "Paid" && (
+                  <div className="flex justify-between py-2 text-green-600 font-semibold">
+                    <span>Amount Paid</span>
+                    <span>AED {invoice.amountPaid.toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Notes */}
+          {invoice.notes && (
+            <div className="bg-white px-8 py-6 border-b border-gray-200">
+              <p className="text-xs text-gray-500 uppercase mb-2">Notes</p>
+              <p className="text-gray-700">{invoice.notes}</p>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="bg-gray-900 text-white px-8 py-4 text-center">
+            <p className="text-gray-400 text-sm">Thank you for your business!</p>
+            {settings?.website && <p className="text-gray-500 text-xs mt-1">{settings.website}</p>}
+            {settings?.email && <p className="text-gray-500 text-xs">{settings.email}</p>}
+            {settings?.phone && <p className="text-gray-500 text-xs">{settings.phone}</p>}
+          </div>
+
         </div>
-
       </div>
     </div>
   )
