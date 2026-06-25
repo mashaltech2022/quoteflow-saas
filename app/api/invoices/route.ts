@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     }
 
     const count = await prisma.invoice.count()
-    const number = `INV-${new Date().getFullYear()}-${String(count + 1).padStart(4, "0")}`
+    const number = `EFT-${String(count + 1).padStart(4, "0")}`
 
     const invoice = await prisma.invoice.create({
       data: {
