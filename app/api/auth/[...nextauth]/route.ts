@@ -46,6 +46,22 @@ const handler = NextAuth({
   session: {
     strategy: "jwt",
   },
+  callbacks: {
+    // Login ke waqt user.id ko token mein daalo
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id
+      }
+      return token
+    },
+    // Session mein user.id available karao
+    async session({ session, token }) {
+      if (session.user) {
+        (session.user as any).id = token.id
+      }
+      return session
+    },
+  },
   secret: process.env.NEXTAUTH_SECRET,
 })
 
