@@ -45,6 +45,7 @@ export async function POST(request: Request) {
     )
 
   } catch (error) {
+    console.error("REGISTER ERROR:", error)   // <-- asli error yahan print hoga
     return NextResponse.json(
       { error: "Kuch masla ho gaya" },
       { status: 500 }

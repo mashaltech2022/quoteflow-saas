@@ -14,10 +14,17 @@ model User {
   password  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  customers  Customer[]
+  quotations Quotation[]
+  invoices   Invoice[]
+  settings   Settings?
 }
 
 model Customer {
   id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name        String
   companyName String?
   email       String?
@@ -30,6 +37,8 @@ model Customer {
 
 model Quotation {
   id         String          @id @default(cuid())
+  userId     String
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   number     String          @unique
   customerId String
   status     String          @default("Draft")
@@ -46,6 +55,8 @@ model Quotation {
 
 model Invoice {
   id         String        @id @default(cuid())
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   number     String        @unique
   customerId String
   status     String        @default("Unpaid")
@@ -63,6 +74,8 @@ model Invoice {
 
 model Settings {
   id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   businessName String   @default("My Business")
   email        String?
   phone        String?
