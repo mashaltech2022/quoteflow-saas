@@ -1,22 +1,21 @@
-import { NextResponse } from "next/server"
+import { NextResponse, NextRequest } from "next/server"
 import { PrismaClient } from "@prisma/client"
 import { getCurrentUserId } from "@/lib/auth"
 
 const prisma = new PrismaClient()
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = await getCurrentUserId()
+    const userId = await getCurrentUserId(request)
     if (!userId) {
       return NextResponse.json({ success: false, error: "Login zaroori hai" }, { status: 401 })
     }
 
     const { id } = await context.params
 
-    // Sirf isi user ka customer delete hoga
     const result = await prisma.customer.deleteMany({
       where: { id, userId }
     })
@@ -27,16 +26,17 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    console.error("CUSTOMER DELETE ERROR:", error)
     return NextResponse.json({ success: false, error: "Kuch masla ho gaya" }, { status: 500 })
   }
 }
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = await getCurrentUserId()
+    const userId = await getCurrentUserId(request)
     if (!userId) {
       return NextResponse.json({ success: false, error: "Login zaroori hai" }, { status: 401 })
     }
@@ -44,7 +44,6 @@ export async function PATCH(
     const { id } = await context.params
     const body = await request.json()
 
-    // Sirf isi user ka customer update hoga
     const result = await prisma.customer.updateMany({
       where: { id, userId },
       data: body
@@ -56,6 +55,7 @@ export async function PATCH(
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    console.error("CUSTOMER PATCH ERROR:", error)
     return NextResponse.json({ success: false, error: "Kuch masla ho gaya" }, { status: 500 })
   }
 }
